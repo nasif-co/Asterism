@@ -1,0 +1,84 @@
+{
+  "message": [
+    {
+      "own": "C5E",
+      "type": "FINAL",
+      "typeId": 1,
+      "pos": 407,
+      "timeStamp": "20:39:55",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 407,
+      "timeStamp": "20:39:55",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 386,
+      "timeStamp": "20:39:55",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 316,
+      "timeStamp": "20:39:54",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 202,
+      "timeStamp": "20:39:54",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 102,
+      "timeStamp": "20:39:54",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 15,
+      "timeStamp": "20:39:54",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "FINAL",
+      "typeId": 1,
+      "pos": 11,
+      "timeStamp": "20:39:53",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 11,
+      "timeStamp": "20:39:53",
+      "dateStamp": "15/07/19"
+    },
+    {
+      "own": "C5E",
+      "type": "CON",
+      "typeId": 0,
+      "pos": 19,
+      "timeStamp": "20:39:53",
+      "dateStamp": "15/07/19"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "coop_light",
+  "version": "1.0.0",
+  "description": "node.js server running the lighting system for coop Accordéon-nous",
+  "main": "coop_light.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nasif Rincón",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "node-lifx": "^0.8.0",
+    "serialport": "^7.1.5",
+    "socket.io": "^2.2.0",
+    "suncalc": "^1.8.0",
+    "xbee-api": "^0.6.0"
+  }
+}
