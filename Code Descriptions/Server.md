@@ -20,7 +20,7 @@ client.on('light-new', function(light){registerLights(light);}); //Register the 
 client.init();
 //End lifx Setup
 ```
-Here we include our LIFX package, we give the server the MAC addresses of the LIFX bulbs that we are using for the project and then we tell it to constantly search for lights. Whenever a new bulb is found on the network, the *'light-new'* event will happen, which in turn will execute the *registerLights* callback function, passing the light that was found as a parameter:
+Here we include our LIFX package, we give the server the MAC addresses of the LIFX bulbs that we are using for the project and then we tell it to constantly search for lights. Whenever a new bulb is found on the network, the *'light-new'* event will happen, which in turn will execute the *registerLights* callback function, passing the light that was found as an argument:
 
 ```js
 function registerLights(light){
@@ -42,7 +42,7 @@ function registerLights(light){
 }
 ```
 
-Once called, this function will compare the found light's MAC address with the ones stored in the *lifxMAC* variable. If one of these match, it will register the bulb and print a confirmation message to the console. Otherwise, it will print an 'Unknown bulb message' as well the the bulb's MAC address, in case we want to modify the code so as to include it.
+Once called, this function will compare the found light's MAC address with the ones stored in the *lifxMAC* variable. If one of these match, it will register the bulb and print a confirmation message to the console. Otherwise, it will print an 'Unknown bulb' message, as well the the bulb's MAC address, in case we want to modify the code so as to include it.
 
 ### XBee Setup
 
@@ -67,7 +67,7 @@ xbeeAPI.builder.pipe(serialport);
 //End XBee Setup
 ```
 
-First we include both the serialport and xbee packages used. Once done, we set the XBee in API mode, as is required by this particular package, and we type in the serial address for the XBee. In Mac, you can find this address by opening up a terminal window and typing:
+First we include both the serialport and xbee packages used. Once done, we set the XBee in API mode (as is required by this particular package) and we add the serial address for the XBee. In Mac, you can find this address by opening up a terminal window and typing:
 ```
 ls /dev/tty.usb*
 ```
@@ -88,7 +88,7 @@ var webServer = app.listen(3000); //Start Web Server on port 3000
 app.use(express.static('public')); //Host the files in the 'public' folder on the server
 //End express setup
 ```
-This code starts a webserver on port 3000 ([localhost:3000](http://localhost:3000)), and hosts the files located inside the *public* directory that is at the root folder in the node server directory.
+This code starts a webserver on port 3000 ([localhost:3000](http://localhost:3000)), and hosts the files located inside the *public* directory that is at the root folder in the coop_light directory.
 
 #### JSON data storage
 
@@ -105,7 +105,7 @@ if(exists){
 }
 //End JSON setup
 ```
-This snippet is used to setup the file that will store the latest data from the server. We first include the fs (File System dependency) and create a variable that stores the last ten movements in JSON format. Then, we check to see if a storage file already existed. If it did, we save its contents into out lastTen variable as soon as we run the server. If it did not, we simply initialize our lastTen variable as an empty JSON object. As data comes in, this object will fil up and create a storage file that will be described in the next section.
+This snippet is used to setup the file that will store the latest data from the server. We first include the fs (File System dependency) and create a variable that stores the last ten movements in JSON format. Then, we check to see if a storage file already existed. If it did, we save its contents into our *lastTen* variable as soon as we run the server. If it did not, we simply initialize our *lastTen* variable as an empty JSON object. As data comes in, this object will fil up and create a storage file that will be described in the next section.
 
 #### Suncalc Sunrise-Sunset calculator
 ```js
@@ -119,7 +119,7 @@ var sunDown = false;
 setInterval(serverClock,60000); //Run the clock functions every minute.
 //End SunCalc setup
 ```
-This extra code is used to change the way the visualization looks in daytime and nighttime. I found it helps due to the very variable yearly sunrise and sunset times in Canada. The code first includes the SunCalc dependency, then gets the serverTime in the format 'HH:MM' as well as both the sunriseTime and nighttime using the latitude and longitude values of the coop (or close enough). It then creates a boolean variable that stores if the sun is up or down, and sets an interval that will call the serverClock function every minute:
+This extra code is used to change the way the visualization looks in daytime and nighttime. I found it helps due to the very variable yearly sunrise and sunset times in Canada. The code first includes the SunCalc dependency. Then, it stores the *serverTime* in the format 'HH:MM', as well as both the *sunriseTime* and *nightTime* using the latitude and longitude values of the coop (or close enough). It then creates a boolean variable that keeps track of when the sun is up or down. Finally, the snippet ends by setting an interval that will call the *serverClock* function every minute:
 
 ```js
 //Function that keeps track of time/sunlight phases
@@ -145,7 +145,7 @@ function serverClock(){
 }
 ```
 
-In turn, this function updates the server time, checks for the new sunriseTime and nightime at 1:00AM every day, and also keeps track of the sunDown variable, making sure it is accurate. Whenever the sun sets or rises, it also tells any open visualization that it is now daytime or nighttime (which is described below).
+This function updates the server time, checks for the new *sunriseTime* and *nightime* at 1:00AM every day, and also keeps track of the sunDown variable, making sure it is accurate. Whenever the sun sets or rises, it also tells any open visualization that it is now daytime or nighttime (which is described below).
 
 #### Socket.io
 ```js
@@ -156,7 +156,7 @@ io.sockets.on('connection', initVisualization); //use this to trigger a function
 //End socket setup
 ```
 
-Here we include the socket.io dependency, and we establish that as soon as a connection to the web visualization is established (ie. somebody goes enters the url), the event *'connection'* will occur, which executes the *initVisualization* callback function:
+Here we include the socket.io dependency and we establish that, as soon as a connection to the web visualization is established (ie. somebody enters the url), the event *'connection'* will occur, which executes the *initVisualization* callback function:
 
 ```js
 function initVisualization(){
@@ -180,7 +180,7 @@ serialport.on("open",function(){ //Happens when we establish serial connection w
   setInterval(standbyUpdater,(20*60000)); //Sends the current position to the sliders every 20 min, making sure they are all in sync
 });
 ```
-This first event happens only once, when the server starts and we establish connection with the XBee through the serial port. However, it is here where we setup 3 important intervals for the inner-workings of the server:
+This first event happens only once, when the server starts, and is in charge of establishing connection with the XBee through the serial port. However, it is here where we set up 3 important intervals for the inner-workings of the server:
 
 ##### checkForOverflow Interval
 ```js
@@ -193,7 +193,7 @@ function checkForOverflow(){
 	}
 }
 ```
-This interval checks how many messages have been sent in the last 1700ms, clearing out the *recentMessages* variable when no messages have been sent in this timeframe. This is used in the sendPosition function to regulate how often we send messages out.
+This interval checks if any messages have been sent in the last 1700ms, clearing out the *recentMessages* variable when no messages have been sent in this timeframe. This is used in the sendPosition function to regulate how often we send messages out.
 
 ##### standbyUpdater Interval
 ```js
@@ -231,18 +231,18 @@ function sendPosition(){
 ```
 This function is one of the key pieces of the server, as it manages all the messages that go out from the server to the controllers, as well as the timing between each message. It is called every 200ms and the first thing it does is check if it needs to send a message. For this to be true, two conditions must be met:
 
-  * We have received a new position from the sliders *or* the standbyUpdate flag is set to true.
+  * We have received a new position from the sliders *or* the *standbyUpdate* flag is set to true.
   * We are NOT currently waiting to send a message
   
-If both conditions are met, we declare we are currently waiting to send a message (waitingToSend = true) and we declare that the update has been fulfilled (standbyUpdate = false). After this, we increment the amout of messages recently sent out (recentMessages++) but keep it at a limit of 9 messages. This counter will be used to define how mush time we must wait before sending the message we are about to send. 
+If both conditions are met, we declare we are currently waiting to send a message (*waitingToSend* = true) and we declare that the update sync has been fulfilled (*standbyUpdate* = false). After this, increment the amout of messages recently sent out (recentMessages++) but keep it at a limit of 9 messages. This counter will be used to define how much time we must wait before sending the message we are about to send. 
 
-Now, we set a timeout. This will send out our message by calling the sendTX function, logging the message to the console, setting the waitingtoSend flag as false and establishing that the new global position of the controllers is now synchronized. However, how much time we must wait to execute these operations is defined by the *flowControl* array:
+Now, we set a timeout. This will send out our message by calling the sendTX function, logging the message to the console, setting the waitingtoSend flag as false and establishing that the new global position of the controllers is now synchronized (*prevGlobalPosition = globalPosition;*). However, how much time we must wait to execute these operations is defined by the *flowControl* array:
 
 ```js
 var flowControl = [0,100,200,300,500,1000,1700,1700,1700];
 ```
 
-This variable has 9 positions, each with a different wait time in milliseconds. Which of these is used is defined by how many messages have been sent recently. Therefore is we have sent 2 messages, we must wait 100ms. If we have sent 9 or more we must wait 1700ms. These wait times were set through prototyping, trying to reach the shortest waittimes that would ensure the Arduinos would receive every message. 
+This variable has 9 positions, each with a different wait time in milliseconds. Which of these is used is defined by how many messages have been sent recently. Therefore is we have sent 2 messages, we must wait 100ms. If we have sent 9 or more we must wait 1700ms. These wait times were set through prototyping, trying to reach the shortest wait times that would ensure the Arduinos would receive every message. 
 
 ### Receiving and Visualizing Messages from the Controllers
 
@@ -282,9 +282,9 @@ function visualize(messageName,ownedBy,value){
 }
 ```
 
-This function receives the 3 data values from the XBee message and builds a JSON data object that contains important data about this last movement in the system. It then emits this JSON object to the webserver for visualization. Once done, it adds this data object to the lastTen variable and stores it in the storage file: lastTen.json.
+This function receives the 3 data values from the XBee message and builds a JSON data object that contains all important data about this last movement in the system. It then emits this JSON object to the webserver for visualization. Once done, it adds this data object to the lastTen variable and stores it in the storage file: lastTen.json.
 
-Now back to the event:
+Now back to the XBee message receiving event:
 
 ```js
 if(words[0]=="FINAL"){ //If it is a message received when the user has moved the slider and stopped
@@ -298,7 +298,7 @@ if(words[0]=="FINAL"){ //If it is a message received when the user has moved the
 	   }
 ```
 
-In this part, we already know it is a normal message and we have divided it by the delimiter. Now we act differently depending on what kind of message it is. If it is a FINAL type message, we must update both the bulbs and the controllers. We set the globalPosition as the one received in the message, we save this also to lightPosition, constraining it between 0 adn 500, and then we call the *moveLightObject* function, which animates the light bulbs:
+In this part, we already know it is a normal message and we have divided it by the delimiter. Now we act differently depending on what kind of message it is. If it is a FINAL type message, we must update both the bulbs and the controllers. We set the globalPosition as the one received in the message, we save this also to lightPosition, constraining it between 0 and 500, and then we call the *moveLightObject* function, which animates the light bulbs:
 
 ```js
 function moveLightObject(brightness){
@@ -330,7 +330,7 @@ This function basically does a brightness mapping depending on the values receiv
 	   	globalPosition = parseInt(words[3],10); //Save the position as an int. This will trigger sendPosition()
 ```
 
-This part states that if the message is not a FINAL message but rather an 'STR' or Struggle Message, we must act the same way as if it were a FINAL message, except for the owner line. By changing the owner to COORD, the message will reach all controller, including the original sender.
+This part states that if the message is not a FINAL message but rather an 'STR' or Struggle Message, we must act the same way as if it were a FINAL message, except for the owner line. By changing the owner to COORD, the instruction will be followed by all controllers, including the original sender.
 
 ```js
 else if(words[0]=="CON"){ //Else if the message is received during the movement of a slider
@@ -351,7 +351,7 @@ Finally, if the message is a 'CON' or Control message, we only have to update th
 });
 ```
 
-This final part closes the Xbee event that happens when a message is received. The else comes from checking if the message packet is type 0x90 (normal message type). If it is not, the code enters this section, which only prints an error message that contains both the received data and its type, for troubleshooting.
+This final part closes the Xbee message received event. The 'else' comes from checking if the message packet is type 0x90 (normal message type). If it is not, the code enters this section, which only prints an error message that contains both the received data and its type, for troubleshooting.
 
 ### Troubleshooting
   * If the web visualization doesn't run, it could be due to a change in the host computer's IP address. Try running it on the host computer at http://localhost:3000 and then look up the computers IP address in order to run it on other devices on the network.
