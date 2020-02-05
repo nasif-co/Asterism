@@ -22,13 +22,13 @@ The setup functions starts by defining certain colors that are used in the visua
 
 Here we define 5 types of data messages that may be received from the server: (The names of these messages is defined in the server code)
 
-* CON :: A controller message, contains data from a continuous movement from a particular controller.
-* FINAL :: A final message, contains data from the last position reached at the end of a continuous movement.
-* STR :: Struggle message, contains the data of controller fighting to keep its position.
 * INIT :: The initial message sent from the server to start the visualization
 * TIMES :: Carries a boolean data value telling the visualization if it is nighttime or daytime.
+* CON :: A controller message, contains data from a continuous movement from a particular controller.
+* FINAL :: A final message, contains data from the last position reached at the end of a continuous movement.
+* STR :: Struggle message, contains data of the controller fighting to keep its position.
 
-In order to react to each message, callbacks are attached to them depending on the type of information they give:
+In order to react to each message, callbacks are attached to them depending on the type of information they carry:
 
 ### InitVisualization
 This is the first function called once communication is established with the server. It is meant to fill up the *message* arrays, which store each of the JSON properties of the last 10 messages.
@@ -48,7 +48,7 @@ function initializeVisualization(data){
 	}
 }
 ```
-Therefore, this code runs a for loop that fills up the *message* arrays with the respective properties of each of the received JSON objects. Each message has an owner name, a message type, a position value, a time it arrived to the server and a date. Hence, to find the owner name of the first message you have to call *messageOwner[0]*, or to get that same messages time you must call *messageTime[0]*. The index value corresponds to the ranking of the messages.
+Therefore, this code runs a for loop that fills up the *message* arrays with the respective properties of each of the received JSON objects. Each message has an owner name, a message type, a position value, a time it arrived to the server and a date. Hence, to find the owner name of the first message you have to call *messageOwner[0]*, or to get that same message's time you must call *messageTime[0]*. The index value corresponds to number of the message in question, 0 being the most recent message and 9 being the oldest one.
 
 After filling out the arrays, the *pos* variable is set equal to the *messageValue* in position 0 of the array, the most recent message. This defines the current position of the 'light-object'.
 
@@ -80,14 +80,13 @@ function catchTimes(data){
 			}
 		}
 	}
-
 	prevSunDown = sunDown;
 }
 ```
 
-We first set sunDown (boolean) equal to the data received. Then, if the visualization has just started (millis()<3000), we immediately set the visualization background to blue for nighttime or orange for daytime. If, on the contrary, the visualization has already been running for a while, we do a gradual 'sunrise' or 'sunset' effect. To achieve this, we do a for loop with 100 steps. Inside it, we set 100 timeouts, each separated by 100ms and each setting a gradually increasing color in the range from blue to orange (sunrise) or orange to blue (sunset). Therefore, we get an animated gradient with 100 frames and a duration of 10 seconds (10fps).
+We first set *sunDown* (boolean) equal to the data received. Then, if the visualization has just started (millis()<3000), we immediately set the visualization background to *blue* for nighttime or *orange* for daytime. If, on the contrary, the visualization has already been running for a while, we do a gradual 'sunrise' or 'sunset' effect. To achieve this, we do a for loop with 100 steps. Inside it, we set 100 timeouts, each separated by 100ms. Each timeout, (ie. every 100ms) the program sets the background color to a slightly more orange ( if changing from blue to orange: sunrise) or blue (if changing from orange to blue: sunset) tone. Therefore, we get an animated gradient with 100 frames and a duration of 10 seconds (10fps).
 
-Once the changes have been executed, we update prevSunDown to equal the current sunDown value.
+Once the changes have been executed, we update *prevSunDown* to equal the current *sunDown* value.
 
 ### controllerMessage
 This is the general function whenever a JSON object arrives containing the data of a single movement in the network. What it does is erase the last data point in the *message* arrays, and shift the whole list downward, adding the new data in position 0. This way, the data contained in index 0 of all of the *message* arrays corresponds to the data of the most recent message, while the data contained in index 9 corresponds to the data of the oldest message that we have stored.
@@ -112,9 +111,9 @@ function controllerMessage(data){
 }
 ```
 
-To achieve this, we use the *unshift* function. This automatically adds the latest data point on the 0 position, shifting everything downward. Then, we make sure the length of the each of the *message* stays at 10, which deletes the data of the previous 10th position.
+To achieve this, we use the *unshift* function. This automatically adds the latest data point on the 0 position, shifting everything downward. Then, we make sure the length of each of the *message* arrays stays at 10, which deletes the data of the previous 9th position.
 
-Also, this functions updates the current position of the ligh-object, making sure it coincides with the position value of the message in index 0.
+Also, this functions updates the current position of the light-object, making sure it coincides with the position value of the message in index 0.
 
 ## Draw
 ```js
@@ -149,10 +148,10 @@ if(smoothPos<125){
 ```
 Here we control the fill of the light-object, the little ball moving from left to right. The three 'if's set the alpha value:
 
-* Slowly maps out to 0 if it is in the corners, disappearing.
+* Slowly maps out to 0 if it is at the limits of the visualization area, disappearing.
 * Stays at full brightness if it is inside the range of the bulbs.
 
-Once that is calculated, we call the lightObject function that has the required geometric instructions for drawing the shape of the ball. These instructions are modificed using the parameters the function is called with (1st parameter is x position, 2nd is y position and 3rd is the alpha value).
+Once that is calculated, we call the lightObject function. This function executes all the required geometric instructions for drawing the shape of the ball/light-object. These instructions are modified using the arguments that are passed to the function when it is called: 1st parameter is X position, 2nd is Y position and 3rd is the alpha value).
 
 After this, we draw the bulbs as they react to the movement of the light-object:
 
@@ -181,13 +180,13 @@ if(smoothPos>=-3&&smoothPos<=125){
 ```
 This series of 'if's take care of how much brightness to draw each bulb with. Inside it you find 3 bulbs in each, because 3 bulbs are always drawn. The first 3 parameters are always the same because they don't change in the visualization:
 
-  * X position
-  * Y position
-  * Scale factor
+  * X position of the bulb drawing
+  * Y position of the bulb drawing
+  * Scale of the bulbs
   
 However, the 4th value does change, as it takes care of the brightness of the bulb. For this one we map smoothPos: when the light-object is in the same zone as a bulb, the smoothPos maps out to a brightness value that spans from 0 at one end of the zone to 255 just on top of the bulb and back to 0 at the other end of its zone. Evidently, some half zones cross, which results in having two bulbs on at the same time. 
 
-Once the whole calculation is done, the call to the *bulb* function takes care of the geometry of drawing the bulb in the precies location that was selected.
+Once the whole calculation is done, the call to the *bulb* function takes care of the geometry of drawing the bulb in the location that was selected through the x,y arguments.
 
 Finally, we display the text data of the last 10 messages/movements in the network:
 
@@ -213,7 +212,7 @@ Finally, we display the text data of the last 10 messages/movements in the netwo
   }
 }
 ```
-This part runs through a 10 step for loop. In each step it draws text for the messageOwner, the date, time and the position value, as well as one of 3 icons that denotes if it was a CON, FINAL or STR message. The code always draws the message at index 0 at the same position, and spans down the rest of the messages from there. However, because the list is always shifting, the data for each position always changes. This is not controlled here but rather in the *controllerMessage* callback. One last effect that allows us to know which message is more recent and which one is older is the fact that the messages are drown in decreasing opacity. Hence, the newset message is the most opaque whilst the oldest is barely visible. This is achieved in this line:
+This part runs through a 10 step for loop. In each step it draws text for the messageOwner, the date, time and the position value, as well as one of 3 icons that denotes if it was a CON, FINAL or STR message. The code always draws the message at index 0 at the same position, and spans down the rest of the messages from there. However, because the list is always shifting, the data for each position always changes. This is not controlled here but rather in the *controllerMessage* callback. One last effect that allows us to know which message is more recent and which one is older is the fact that the messages are drawn in decreasing opacity. Hence, the newest message is the most opaque whilst the oldest is barely visible. This is achieved in this line:
 ```js
 fill(255,255-(i*25.5));
 ```
