@@ -34,7 +34,7 @@ void loop() {
   checkSliding(); //Check if the pot is being moved
 ```
 
-The first line of the loop is in charge of refreshing the XBee, reading the messages as they come. For this reason, we want this to happen as soon as possible, which is why we must strive to use non-blocking code. This is the reason why no delay() calls are used in the code.
+The first line of the loop is in charge of refreshing the XBee, reading the messages as they come. In order to catch every message that arrives, we want this line to be executed as often as possible, which is why we must strive to use non-blocking code. This is the reason why no delay() calls are used in this program.
 
 Then we call the custom filter function:
 
@@ -70,13 +70,13 @@ void checkSliding() {
 The first 'if' checks if there is a difference between the current position of the potentiometer and it's previous one. If so, it sets *moveTimer* to the current sketch millis time. This line of code gets called every frame, as long as the potentiometer is moving, which is why the next 'if' asks how much time has passed since the code executed that line (ie. How long ago did the slider last move?). If it has been more than the time stored in the moveSensitivity variable:
 
 ```c++
-const int moveSensitivity = 600;
+const int moveSensitivity = 600; // 0.6 seconds
 ```
 
-Then we asume it is not sliding (sliding = false). If less time has passed, we asume it is currently sliding (sliding = true).
+Then we asume it is not sliding anymore (*sliding* = false). If less time has passed, we asume it is currently sliding (*sliding* = true).
 
 ### Sending values
-Up until now, the code is capable of reading and filtering the pot position, as well as telling if it is currently being moved or not. Now we skip the beggining of the next 'if' and jump to the 'else' on line 86:
+Up until now, the code is capable of reading and filtering the pot position, as well as telling if it is currently being moved or not. Now, we skip the beggining of the next 'if' and jump to the 'else' on line 86:
 
 ```c++
 else { //If slider was moved by a user
@@ -102,15 +102,15 @@ else { //If slider was moved by a user
 This 'else' refers to when the slider has been moved by the user, rather than by having received a message (which is what the first part of the 'if' covers and what we will look into after this section). 
 
 Inside this 'else' we ask for two conditions:
-  * The current position (pos) is different from the last sent value for position (lastSentPos) (ie. We are at a new position that has not been sent)
+  * The current position (*pos*) is different from the last sent value for position (*lastSentPos*) (ie. We are at a new position that has not been sent)
   * A certain interval of time has passed since we last sent a position. This interval is defined by the variable:
   ```c++
-  const int sendInterval = 200;
+  const int sendInterval = 200; // 0.2 seconds
   ```
   
-If these two conditions are met, we proceed to send a message to the server. This is done using the prebuilt *sendPack* function and feeding it a string in the predetermined format (see teamfeed), as well as the XBee cordinator 64bit and 16bit address. We then update *lastSentPos* and set 'sending' as true, meaning that we are currently in the process of sending position values as the person slides the pot. Finally, we reset the *sendTimer*, so the next message is sent respecting the time interval defined by the *sendInterval* variable.
+If these two conditions are met, we proceed to send a message to the server. This is done using the prebuilt *sendPack* function and feeding it a string in the predetermined format (see teamfeed), as well as the XBee cordinator 64bit and 16bit addresses. We then update *lastSentPos* and set *sending* as true, meaning that we are currently in the process of sending position values as the person slides the pot. Finally, we reset the *sendTimer*, so the next message is sent respecting the time interval defined by the *sendInterval* variable.
 
-Once the slider stops being moved, the sliding variable will become false and so the code will enter the second 'if'. This part is meant to send a FINAL message to the server, indicating the final position the slider reached in this instance of movement. With this in mind, this part works almost identically to the one before it, except that it sets sending as false, since this message ends the process of sending values.
+Once the slider stops being moved, the *sliding* variable will become false and so the code will enter the second 'if'. This part is meant to send a FINAL message to the server, indicating the final position the slider reached in this instance of movement. With this in mind, this part works almost identically to the one before it, except that it sets *sending* as false, since this message ends the process of sending values.
 
 ### Receiving values
 Now we must take a look at how the arduino receives messages through the XBee. As we saw in the setup, we established *processRxPacket* as the callback function whenever a message is received:
@@ -141,9 +141,9 @@ void processRxPacket(ZBRxResponse& rx, uintptr_t) { //callback that processes th
 
 Here we start by creating *got*, a String in which we write each byte of data received, one by one, by using a for loop. Next, we split *got* by its delimiter: '|', using the getValue() function [that we got here](https://stackoverflow.com/questions/9072320/split-string-into-string-array). Lastly we process the data we got:
 
-If its type is CON, it means it is a Sync Message we got from the coordinator. This means we have received the instruction of updating the position of the slider to sync up to the position received. However, because moving the slider with the motor is not 100% precise, we must leave a margin of error. For this reason, we do not set a single 'newPos' variable, but rather a range with a lower limit (lowLim) and a higher limit (hiLim) that the slider cannot surpass. With these two, we create a 6 unit range in which the slider can sit. 
+If its type is CON, it is a Sync Message we got from the coordinator. This means we have received the instruction of updating the position of the slider to sync up to the position received. However, because moving the slider with the motor is not 100% precise, we must leave a margin of error. For this reason, we do not set a single 'newPos' variable, but rather a range with a lower limit (lowLim) and a higher limit (hiLim) that the slider cannot surpass. With these two, we create a 6 unit range in which the slider can sit comfortably. 
 
-After defining this, the lastSentPos is updated to the received position and we ask if the owner of the message we received is this same module. If it is, it means this instruction MUST be ignored. Therefore, the *updating* boolean will stay as false since we do NOT need to update our position. 
+After defining this, the lastSentPos is updated to the received position and we ask if the owner of the message we received is this same module (ie. if this module was the one to send this position to the server for updating all other controllers). If it is, it means this instruction MUST be ignored. Therefore, the *updating* boolean will stay as false since we do NOT need to update our position. 
 
 If, on the contrary, the owner is not this same module, we must heed the instruction so as to sync to the owner. Hence, *updating* is set to true, and it works as a flag that tells the program that it must update its position to reach the lowLim-hiLim range. 
 
@@ -185,7 +185,7 @@ The last internal 'if' has a key role: it checks how much time has passed since 
 ```c++
 const int maxTimeToUpdate = 1200; // 1.2 seconds
 ```
-If it takes more than that, it means there is a struggle going on. Someone is fighting with this position and trying to set a new position of their own. When this happens, the code proceeds to inform the server, sending a Struggle Message. Once done, the code then updates the lastSentPos, and resets the moving timer to exit this 'if'.
+To reach it. If it takes more than that, it means there is a struggle going on. Someone is fighting with this position and trying to set a new position of their own. When this happens, the code proceeds to inform the server, sending a Struggle Message. Once done, the code then updates the lastSentPos, and resets the moving timer to exit this 'if'.
 
 The server then takes care of how the struggles are managed, and sends the respective messages that can be processed by the *processRxPacket* in the same way as the Sync Messages.
 
@@ -196,7 +196,7 @@ prevPos = pos;
 Making sure we have an updated value for the previous position, as this is used to detect movement in the *checkSliding* function.
 
 ## Notes
-* Right now, the values the potentiometer moves in are mapped and constrained inside a 0-500 range. This gives it a lot of stability, but loses the change to have a larger range. For the moment it works nicely, since we are using but three bulbs. However, once the full set of 15 bulbs is put into motion, we will have to consider making this a larger range, so as to have better control over the movement of the light object.
-* This is a general explanation of how the code works. However, you may find that the code for each controller has a different value for this or that variable. This is due to trial and error. In testing each slider we found differences that we had to take into account when defining the specific values used in each variable.
-* For clarity, I consider the prefix CON used in the Sync messages has to be changed to SYNC. This requires a change in the *processRxPacket* function.
-* After soldering the circuits, I realized that some of the sliders will be facing towards the Rue René Levesque, while others will be facing the other way. This means some of the controllers must be mirrored. To resolve this, we chose to add a small two-position switch, that lets you mirror the controller if necessary. However, THIS HAS NOT YET BEEN ADDED TO THE CIRCUITS.
+* Right now, the values the potentiometer moves in are mapped and constrained inside a 0-500 range. This gives it a lot of stability, but loses the chance to have a larger range. For the moment it works nicely, since we are using but three bulbs. However, once the full set of 15 bulbs is put into motion, we will have to consider making this a larger range (900?), so as to have better control over the movement of the light object.
+* This is a general explanation of how the code works. However, you may find that the code for each controller has a different value for this or that variable. This is due to trial and error. In testing each slider, we found differences that we had to take into account when defining the specific values used in each variable.
+* For clarity, I consider the prefix CON used in the Sync messages has to be changed to SYNC. This requires a change in the *processRxPacket* function, as well as in the server code.
+* After soldering the circuits, I realized that some of the sliders will be facing towards Rue René Levesque, while others will be facing the other way. This means some of the controllers must be mirrored. To resolve this, we chose to add a small two-position switch, that lets you mirror the controller if necessary. However, THIS HAS NOT YET BEEN ADDED TO THE CIRCUITS.
