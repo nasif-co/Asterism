@@ -30,7 +30,7 @@ var standbyUpdate = false; //Used to override normal checks before sending a mes
 //Lifx package and setup variables
 var LifxClient = require('node-lifx').Client;
 var client = new LifxClient();
-const lifxMAC = ['d073d51375c8','d073d5139da2','d073d52bcca5']; //Our Lifx mac addresses in the same order as the bulbs
+const lifxMAC = ['d073d52bd838','d073d52bb7d9','d073d52bcca5']; //Our Lifx mac addresses in the same order as the bulbs
 
 //Lifx Setup:: Lamp discovery and initialization
 client.on('light-new', function(light){registerLights(light);}); //Register the LIFx Lights
@@ -38,7 +38,8 @@ client.init();
 //End lifx Setup
 
 //XBee Setup
-var SerialPort = require('serialport');
+//var SerialPort = require('serialport');
+const { SerialPort } = require('serialport')
 var xbee_api = require('xbee-api');
 var C = xbee_api.constants;
 
@@ -46,8 +47,9 @@ var xbeeAPI = new xbee_api.XBeeAPI({
 	api_mode: 2
 });
 
-var serialport = new SerialPort("/dev/cu.usbserial-A4007Uj0", { //Coordinator serial port
-	baudRate: 115200.
+var serialport = new SerialPort( { 
+	path:"/dev/tty.usbserial-DN05LSUY",
+	baudRate: 115200 //Be careful when reprogramming the coordinator, the baudRate sometimes is reset to 9600 in XCTU
 });
 
 serialport.pipe(xbeeAPI.parser);
@@ -82,11 +84,12 @@ if(exists){
 
 //SunCalc setup: for sunrise-sunset times
 var SunCalc = require('suncalc');
-var serverTime = (('0'+(new Date()).getHours()).substr(-2)).concat(":",('0'+(new Date()).getMinutes()).substr(-2));
-var sunriseTime = ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunrise.getHours()).substr(-2) + ":" + ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunrise.getMinutes()).substr(-2);
-var nightTime = ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunset.getHours()).substr(-2) + ":" + ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunset.getMinutes()).substr(-2);
+var serverTime = (('0'+(new Date()).getHours()).substring(-2)).concat(":",('0'+(new Date()).getMinutes()).substring(-2));
+var sunriseTime = ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunrise.getHours()).substring(-2) + ":" + ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunrise.getMinutes()).substring(-2);
+var nightTime = ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunset.getHours()).substring(-2) + ":" + ('0'+SunCalc.getTimes(new Date(), 46.8078441, -71.22027609999999).sunset.getMinutes()).substring(-2);
 console.log(sunriseTime,nightTime);
 var sunDown = false;
+serverClock(); //Run the clock functions immediately to accurately display the visualization from the start
 setInterval(serverClock,60000); //Run the clock functions every minute.
 //End SunCalc setup
 
@@ -165,7 +168,8 @@ function sendPosition(){
 
 		recentMessages++;
 		if(recentMessages>9) recentMessages = 9;
-		console.log(recentMessages);
+		//Printed to visualize flow control
+		//console.log(recentMessages);
 
 		setTimeout(function(){
 			sendTX("CON|".concat(owner,"|",lightPositionString));
