@@ -30,7 +30,7 @@ var standbyUpdate = false; //Used to override normal checks before sending a mes
 //Lifx package and setup variables
 var LifxClient = require('node-lifx').Client;
 var client = new LifxClient();
-const lifxMAC = ['d073d52bd838','d073d52bb7d9','d073d52bcca5']; //Our Lifx mac addresses in the same order as the bulbs
+const lifxMAC = ['d073d52bb7d9', 'd073d52c02ee', 'd073d52bcca5', 'd073d52bdb86', 'd073d52bea9c', 'd073d52bd838']; //Our Lifx mac addresses in the same order as the bulbs
 
 //Lifx Setup:: Lamp discovery and initialization
 client.on('light-new', function(light){registerLights(light);}); //Register the LIFx Lights
@@ -190,40 +190,56 @@ function checkForOverflow(){
 }
 
 function registerLights(light){
-	if(light.id==lifxMAC[2]){
-		bulb[0] = light;
+	if( lifxMAC.includes( light.id ) ){
+		let position = lifxMAC.findIndex( element => element == light.id );
+		bulb[ position ] = light;
 		light.color(0,100,0,3500,200);
-		console.log('                                                LIFX::: Bulb one registered.');
-	}else if(light.id==lifxMAC[1]){
-		bulb[1] = light;
-		light.color(0,100,0,3500,200);
-		console.log('                                                LIFX::: Bulb two registered');
-	}else if (light.id==lifxMAC[0]) {
-		bulb[2] = light;
-		light.color(0,100,0,3500,200);
-		console.log('                                                LIFX::: Bulb three registered');
+		console.log('                                                LIFX::: Bulb ' + (position + 1) + ' registered.');
 	}else{
 		console.log('                                                LIFX::: Unknown light in the network, id: ' + light.id)
 	}
 }
 
+//Smoothed out movement variables
+//Implemented from https://www.youtube.com/watch?v=VWfXiSUDquw
+let smoothedLightPos = 0;
+let drag = 0.1; //0.75
+let strength = 0.5; //0.05
+let vel = 0;
+
+let bulbFrameRate = 5;
+
+let animationInterval = null;
+let currentBulbsBrightness = [ 0, 0, 0, 0, 0, 0];
+
 function moveLightObject(brightness){
-	if(lightPosition<=125){
-		if(bulb[0]!=undefined) bulb[0].color(0,0,map(lightPosition,0,125,0,brightness),3500,100);
-		if(bulb[1]!=undefined) bulb[1].color(0,0,0,3500,100);
-		if(bulb[2]!=undefined) bulb[2].color(0,0,0,3500,100);
-	}else if(lightPosition>125&&lightPosition<=250){
-		if(bulb[0]!=undefined) bulb[0].color(0,0,map(lightPosition,126,250,brightness,0),3500,100);
-		if(bulb[1]!=undefined) bulb[1].color(0,0,map(lightPosition,126,250,0,brightness),3500,100);
-		if(bulb[2]!=undefined) bulb[2].color(0,0,0,3500,100);
-	}else if(lightPosition>250&&lightPosition<=375){
-		if(bulb[0]!=undefined) bulb[0].color(0,0,0,3500,100);
-		if(bulb[1]!=undefined) bulb[1].color(0,0,map(lightPosition,251,375,brightness,0),3500,100);
-		if(bulb[2]!=undefined) bulb[2].color(0,0,map(lightPosition,251,375,0,brightness),3500,100);
-	}else if(lightPosition>375){
-		if(bulb[0]!=undefined) bulb[0].color(0,0,0,3500,100);
-		if(bulb[1]!=undefined) bulb[1].color(0,0,0,3500,100);
-		if(bulb[2]!=undefined) bulb[2].color(0,0,map(lightPosition,375,500,brightness,0),3500,100);
+	//lightPosition comes in between 0 and 500
+	if( animationInterval == null && Math.abs( smoothedLightPos - lightPosition) > 0 ){
+		animationInterval = setInterval( function(){
+			//Move light object
+			let force = lightPosition - smoothedLightPos;
+			force *= strength;
+			vel *= drag;
+			vel += force;
+
+			smoothedLightPos +=vel;
+
+			for (const key of bulb.keys()) {
+				let intervalSize = 500/7;
+				let newBulbBrightness = constrain(map(smoothedLightPos, intervalSize*key, intervalSize*(key+1),0,1),0,1)*brightness - constrain(map(smoothedLightPos,intervalSize*(key+1),intervalSize*(key+2),0,1),0,1)*brightness;
+				if( newBulbBrightness != currentBulbsBrightness[key] ){
+					bulb[key].color(0,0,newBulbBrightness,3500,1000/bulbFrameRate);
+					currentBulbsBrightness[key] = newBulbBrightness;
+				}
+			}
+
+			//Check if light object is in final destination and end animation if it is
+			if( Math.abs( smoothedLightPos - lightPosition) < 0 ){
+				//Arrived at destination
+				clearInterval(animationInterval);
+				animationInterval = null;
+			}
+		}, 1000/bulbFrameRate);
 	}
 }
 

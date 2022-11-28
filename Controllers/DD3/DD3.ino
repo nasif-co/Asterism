@@ -12,7 +12,7 @@ Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY); //initialize motor
 
 //XBee
 XBeeWithCallbacks xbee; //XBee object with callbacks enabled
-XBeeAddress64 coordAddr = XBeeAddress64(0x0013A200, 0x40E66DD8); // 64bit address to send to (set to all 0's for coordinator)
+XBeeAddress64 coordAddr = XBeeAddress64(0x0013A200, 0x40E66C20); // 64bit address to send to (set to all 0's for coordinator)
 uint16_t coordAddr16 = 0x0000;
 
 //Control
