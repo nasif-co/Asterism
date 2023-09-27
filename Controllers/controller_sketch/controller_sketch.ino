@@ -1,3 +1,13 @@
+/*
+ * 27/09/23
+ * 
+ * Before this update, each controller had to have its own arduino sketch. This was because
+ * the XBee Address ('me' variable) vas hardcoded in each sketch. However, now this address
+ * is requested directly from the connected XBee, so we can have the same code for all
+ * controllers. The only thing that might differ is the calibration for each potentiometer,
+ * but it is not something worth maintaining 14 slightly different sketches for.
+ */
+
 #include <SparkFun_TB6612.h>
 #include <XBee.h>
 #include <Printers.h>
@@ -26,9 +36,9 @@ int lastSentPos = 250;
 bool updating = false;
 unsigned long movingTimer = 0;
 unsigned long sendTimer = 0;
-const int maxTimeToUpdate = 1200;
+const int maxTimeToUpdate = 1000;
 const int sendInterval = 200;
-String me = "C20"; //           CHANGE FOR EACH XBEE
+String me = "";
 bool sliding = true;
 bool sending = false;
 
@@ -37,7 +47,14 @@ void setup() {
   Serial1.begin(115200);
 
   xbee.begin(Serial1); //Apply software serial for XBee
-  xbee.onZBRxResponse(processRxPacket);
+  
+  //Register callback for AT Commands
+  xbee.onAtCommandResponse(readATCommand);
+  delay(5000); //wait for callback registration to be fully configured
+
+  //Ask the XBee for its Serial Number to save its unique ID in the "me" variable
+  AtCommandRequest slRequest((uint8_t*)"SL");
+  xbee.send(slRequest);
 
   pinMode(A3, INPUT);
 
@@ -60,50 +77,73 @@ void setup() {
 void loop() {
   xbee.loop(); //Reads XBee
 
-  filter(); //Used to read and filter the potentiometer readings.
-  checkSliding(); //Check if the pot is being moved
-
-  //Update if global position changed and nobody is blocking movement
-  if (updating) {
-
-    if (pos >= lowLim && pos <= hiLim) {
-      motor1.brake();
-      if (!sliding) {
-        updating = false;
+  //Only proceed with other functions if the XBee has been identified
+  if( !me.equals("") ){
+    filter(); //Used to read and filter the potentiometer readings.
+    checkSliding(); //Check if the pot is being moved
+  
+    //Update if global position changed and nobody is blocking movement
+    if (updating) {
+  
+      if (pos >= lowLim && pos <= hiLim) {
+        motor1.brake();
+        if (!sliding) {
+          updating = false;
+        }
+      } else if (pos > hiLim) {
+        motor1.drive(-map(abs(pos - hiLim), 0, 500, 70, 200));
+      } else if (pos < lowLim) {
+        motor1.drive(map(abs(pos - lowLim), 0, 500, 70, 200));
       }
-    } else if (pos > hiLim) {
-      motor1.drive(-map(abs(pos - hiLim), 0, 500, 70, 230));
-    } else if (pos < lowLim) {
-      motor1.drive(map(abs(pos - lowLim), 0, 500, 70, 230));
+  
+      if (millis() - movingTimer > maxTimeToUpdate) {
+        sendPack("STR|" + me + "|POS|" + String(pos) + " ", coordAddr, coordAddr16);
+        lastSentPos = pos;
+        movingTimer = millis();
+      }
+  
+    } else { //If slider was moved by a user
+  
+      //      (send data in intervals↓)                (pos has not been sent↓)
+      if ((millis() - sendTimer > sendInterval) && (abs(pos - lastSentPos) > 3)) {
+        sendPack("CON|" + me + "|POS|" + String(pos) + " ", coordAddr, coordAddr16);
+        lastSentPos = pos;
+        sending = true;
+        //Serial.println("                     " + String(pos) + "                  ");
+        sendTimer = millis();
+      }
+  
+      if (sending && !sliding) {
+        sendPack("FINAL|" + me + "|POS|" + String(pos) + " ", coordAddr, coordAddr16);
+        lastSentPos = pos;
+        sendTimer = millis();
+        sending = false;
+      }
+  
     }
-
-    if (millis() - movingTimer > maxTimeToUpdate) {
-      sendPack("STR|" + me + "|POS|" + String(pos) + " ", coordAddr, coordAddr16);
-      lastSentPos = pos;
-      movingTimer = millis();
-    }
-
-  } else { //If slider was moved by a user
-
-    //      (send data in intervals↓)                (pos has not been sent↓)
-    if ((millis() - sendTimer > sendInterval) && (abs(pos - lastSentPos) > 3)) {
-      sendPack("CON|" + me + "|POS|" + String(pos) + " ", coordAddr, coordAddr16);
-      lastSentPos = pos;
-      sending = true;
-      //Serial.println("                     " + String(pos) + "                  ");
-      sendTimer = millis();
-    }
-
-    if (sending && !sliding) {
-      sendPack("FINAL|" + me + "|POS|" + String(pos) + " ", coordAddr, coordAddr16);
-      lastSentPos = pos;
-      sendTimer = millis();
-      sending = false;
-    }
-
+    //Serial.println("Sending: "+ String(sending), "Sliding: " + String(sliding));
+    prevPos = pos;
   }
-  //Serial.println("Sending: "+ String(sending), "Sliding: " + String(sliding));
-  prevPos = pos;
+}
+
+void readATCommand(AtCommandResponse& at, uintptr_t data) {
+  String command = (char*)at.getCommand();
+  if( command.equals("SL") ) {
+    if (at.getValueLength()) {
+      String serialNumber;
+      for (size_t i = 0; i < at.getValueLength(); i++) {
+        // Convert the byte to its hexadecimal representation
+        serialNumber += String(at.getValue()[i], HEX);
+      }
+      serialNumber.toUpperCase();
+      me = serialNumber.substring(serialNumber.length() - 3, serialNumber.length());
+      Serial.println("Connected XBee Address: " + me);
+
+      //Now that our XBee has been identified, setup is complete and we can start sending and receiving data
+      //Register the callback for Data Receipt Packets
+      xbee.onZBRxResponse(processRxPacket);
+    }
+  }
 }
 
 void processRxPacket(ZBRxResponse& rx, uintptr_t) { //callback that processes the Received packet
@@ -161,7 +201,7 @@ String getValue(String data, char separator, int index) { //function to split st
 }
 
 unsigned long moveTimer = 0;
-const int moveSensitivity = 600;
+const int moveSensitivity = 300;
 
 
 void checkSliding() {
@@ -183,5 +223,5 @@ void checkSliding() {
 void filter() { //Formula made by Mads Hobye (http://www.hobye.dk/)
   int raw = map(analogRead(A3), minResistance, maxResistance, 0, 500);
   pos = constrain(pos * 0.9 + raw * 0.1, 0, 500);
-  Serial.println(pos);
+  //Serial.println(pos);
 }
