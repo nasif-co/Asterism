@@ -78,7 +78,9 @@ if(exists){
 	lastTen = JSON.parse(fs.readFileSync('JSON_data/lastTen.json','utf8'));
 	console.log("Read back last ten messages received from: 'JSON_data/lastTen.json'");
 }else{
-	lasTen = {};
+	lastTen = {
+		"message": []
+	};
 }
 //End JSON setup
 
