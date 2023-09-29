@@ -24,7 +24,11 @@ const lifxMAC = [
 	'd073d52bcca5', 
 	'd073d52bdb86', 
 	'd073d52bea9c', 
-	'd073d52bd838'
+	'd073d52bd838',
+	'd073d52c14e1',
+	'd073d52bea32',
+	'd073d52bd3bb',
+	'd073d52be27f',
 ];
 //MAC addresses of all bulbs used in the program, in their physical order
 
