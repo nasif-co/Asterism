@@ -77,20 +77,44 @@ var LifxClient = require('lifx-lan-client').Client;
 var client = new LifxClient();
 
 //System variables
-var bulb=[]; //array that holds the outdoor lights in order
+var bulbs = [];
+//array that holds the outdoor lights in order
 
 //Lifx bulb discovery and initialization
 client.on('light-new', function(light){registerLights(light);}); //Register the LIFx Lights
+client.on('light-online', function(light){registerLights(light);}); //Register the LIFx Lights
+client.on('light-offline', function(light){deRegisterLights(light);}); //Register the LIFx Lights
 client.init();
 
 function registerLights(light){
 	if( lifxMAC.includes( light.id ) ){
 		let position = lifxMAC.findIndex( element => element == light.id );
-		bulb[ position ] = light;
-		light.color(0,100,0,3500,200);
+		light.colorRgb( minBrightness, minBrightness, minBrightness, 200 );
+
+		bulbs.push( {
+			idealPosition: position,
+			lifx: light,
+			color: [ minBrightness, minBrightness, minBrightness ],
+		} );
+		bulbs.sort(function(a, b){return a.idealPosition - b.idealPosition});
+
 		console.log('                                                LIFX::: Bulb ' + (position + 1) + ' registered.');
 	}else{
 		console.log('                                                LIFX::: Unknown light in the network, id: ' + light.id)
+	}
+}
+
+function deRegisterLights(light) {
+	let currentKey = null;
+	for (let i = 0; i < bulbs.length; i++) {
+		if( light.id == bulbs[i].lifx.id ) {
+			currentKey = i;
+			break;
+		}
+	}
+	console.log('                                                LIFX::: Bulb ' + (bulbs[i].idealPosition + 1) + ' disconnected.');
+	if( currentKey != null ){
+		bulbs.splice(currentKey, 1);
 	}
 }
 
@@ -241,12 +265,10 @@ xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 			finalSyncTimeout = setTimeout( function(){
 				sliderPosition.current = sliderPosition.next; //Save the new light position in an int. This will trigger sendPosition()
 				for (const key in sublights) {
-					sublights[key].position = constrain(parseInt(words[3],10),0,500);
+					sublights[key].position = constrain(sliderPosition.current,0,500);
 				}
 				moveLightObject(); //Run function that updates the lights according to the final pot movement (argument is brightness 0-100)
 			}, finalSyncDelay);
-		
-//console.log("::::::::::::::::::::Updated lights to: ".concat(lightPosition));
 		}else if(words[0]=="STR"){ //If it is a message received when the user is struggling with another
 			owner = "COORD"; //Set the owner as the coordinator so everyone receives it equally and the position is correctly set
 			sender = words[1]; //Save the owner of the message 
@@ -261,7 +283,7 @@ xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 			clearTimeout(finalSyncTimeout);
 			finalSyncTimeout = setTimeout( function(){
 				for (const key in sublights) {
-					sublights[key].position = constrain(parseInt(words[3],10),0,500);
+					sublights[key].position = constrain(sliderPosition.current,0,500);
 				}
 				moveLightObject(); //Run function that updates the lights according to the final pot movement (argument is brightness 0-100)
 			}, 1000);
@@ -275,7 +297,6 @@ xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 				}
 			}
 			moveLightObject(); //Run function that updates the lights according to current pot movement (argument is brightness 0-100)
-//console.log("::::::::::::::::::::Updated lights to: ".concat(lightPosition));
 		}
 	}else{ //It was another sort of packet, print out the details for debugging:
 		console.log("********Got something odd*********");
@@ -316,7 +337,6 @@ let drag = 0.1; //0.75
 let strength = 0.5; //0.05
 
 let animationInterval = null;
-let currentBulbsColor = [[],[],[],[],[],[]]
   
 function moveLightObject(){
 	//The position of each light comes in between 0 and 500
@@ -334,8 +354,8 @@ function moveLightObject(){
 			}
 
 			//Calculate bulb colors according to light positions
-			for (const key of bulb.keys()) {
-				let intervalSize = 500/(bulb.length - 1);
+			for (const key of bulbs.keys()) {
+				let intervalSize = 500/(bulbs.length - 1);
 				let bulbColor = [];
 				let colorCounter = 0;
 				for (const color in sublights) {
@@ -344,9 +364,9 @@ function moveLightObject(){
 				}
 
 				//Send values to bulb only if they are different from the last sent values
-				if( !arraysAreEqual(bulbColor, currentBulbsColor[key]) ){
-					bulb[key].colorRgb(bulbColor[0],bulbColor[1],bulbColor[2],1000/bulbFrameRate);
-					currentBulbsColor[key] = bulbColor;
+				if( !arraysAreEqual(bulbColor, bulbs[key].color) ){
+					bulbs[key].lifx.colorRgb(bulbColor[0],bulbColor[1],bulbColor[2],1000/bulbFrameRate);
+					bulbs[key].color = bulbColor;
 				}
 			}
 
