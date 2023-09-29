@@ -13,7 +13,7 @@ The PANID for the XBees is 1996.
 /* Variables that can be manually changed to tweak the system */
 const controllerList = {
 	red: "C59",
-	green: "",
+	green: "DD3",
 	blue: "",
 }
 //IDs of active controllers and their colors
@@ -47,9 +47,6 @@ const finalSyncDelay = 800;
 //System variables------------------------------------------------------------------------
 /* Internal variables and objects not meant to be changed */
 var util = require('util');
-var globalPosition = 0; //Global position of all potentiometers. 0-500
-var prevGlobalPosition = 0; //Previously sent position of potentiometers. 0-500
-var lightPositionString = "0"; //String that holds the final received position, to send it back to the pots to update global position
 
 
 
@@ -147,7 +144,7 @@ var waitingToSend = false;
 //True if the program is in the waiting period before sending a new global position message
 
 function sendPosition(){
-	if( ( ( globalPosition != prevGlobalPosition ) || ( standbyUpdate ) ) && !waitingToSend ){
+	if( ( ( sliderPosition.current != sliderPosition.previous ) || ( standbyUpdate ) ) && !waitingToSend ){
 		waitingToSend = true;
 		standbyUpdate = false;
 
@@ -158,13 +155,13 @@ function sendPosition(){
 
 		setTimeout( 
 			function(){
-				sendTX("CON|".concat(owner,"|",lightPositionString));
-				console.log("----------------------------------------------------New Position: ".concat(lightPositionString));
+				sendTX("CON|".concat(owner,"|",sliderPosition.current));
+				console.log("----------------------------------------------------New Position: ".concat(sliderPosition.current));
 				waitingToSend = false;
 			},
 			flowControl[recentMessages]
 		);
-		prevGlobalPosition = globalPosition;
+		sliderPosition.previous = sliderPosition.current;
 	}
 }
 
@@ -217,6 +214,12 @@ var finalSyncTimeout = null;
 var owner; 
 //String that holds the owner module of the last "FINAL" message received
 
+var sliderPosition = {
+	current: 0,
+	previous: 0,
+}
+//Position of the controllers' potentiometers (both current and last received). 0-500.
+
 xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 	if(frame.type==0x90){ //Make sure it is a normal data packet
 		var received = frame.data.toString('utf8') //save the data
@@ -228,24 +231,22 @@ xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 		if(words[0]=="FINAL"){ //If it is a message received when the user has moved the slider and stopped
 			owner = words[1]; //Save the owner of the message 
 			//let type = words[2]; //save message type (not being used right now)
-			lightPositionString = words[3]; //Save the new light position in a string
 			
 
 			clearTimeout(finalSyncTimeout);
 			finalSyncTimeout = setTimeout( function(){
-			globalPosition = parseInt(lightPositionString,10); //Save the new light position in an int. This will trigger sendPosition()
+			sliderPosition.current = parseInt( words[3] ,10); //Save the new light position in an int. This will trigger sendPosition()
 			for (const key in sublights) {
 				sublights[key].position = constrain(parseInt(words[3],10),0,500);
 			}
-			moveLightObject(100); //Run function that updates the lights according to the final pot movement (argument is brightness 0-100)
+			moveLightObject(); //Run function that updates the lights according to the final pot movement (argument is brightness 0-100)
 		}, finalSyncDelay);
 		
 //console.log("::::::::::::::::::::Updated lights to: ".concat(lightPosition));
 		}else if(words[0]=="STR"){ //If it is a message received when the user is struggling with another
 			clearTimeout(finalSyncTimeout);
 			owner = "COORD"; //Set the owner as the coordinator so everyone receives it equally and the position is correctly set
-			lightPositionString = words[3]; //Save the position as a string
-			globalPosition = parseInt(words[3],10); //Save the position as an int. This will trigger sendPosition()
+			sliderPosition.current = parseInt(words[3],10); //Save the position as an int. This will trigger sendPosition()
 		}else if(words[0]=="CON"){ //Else if the message is received during the movement of a slider
 			//lightPosition = constrain(parseInt(words[3],10),0,500); //Save the position as an int
 			let sender = words[1];
@@ -254,7 +255,7 @@ xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 					sublights[key].position = constrain(parseInt(words[3],10),0,500);
 				}
 			}
-			moveLightObject(100); //Run function that updates the lights according to current pot movement (argument is brightness 0-100)
+			moveLightObject(); //Run function that updates the lights according to current pot movement (argument is brightness 0-100)
 //console.log("::::::::::::::::::::Updated lights to: ".concat(lightPosition));
 		}
 	}else{ //It was another sort of packet, print out the details for debugging:
