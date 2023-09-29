@@ -1,5 +1,5 @@
 {
-  "name": "coop_light",
+  "name": "asterism",
   "version": "1.0.0",
   "description": "node.js server running the lighting system for coop Accordéon-nous",
   "main": "coop_light.js",
