@@ -28,7 +28,7 @@ var standbyUpdate = false; //Used to override normal checks before sending a mes
 ///////////////////////////////////////////// S E T U P ////////////////////////////////////////////////
 
 //Lifx package and setup variables
-var LifxClient = require('node-lifx').Client;
+var LifxClient = require('lifx-lan-client').Client;
 var client = new LifxClient();
 const lifxMAC = ['d073d52bb7d9', 'd073d52c02ee', 'd073d52bcca5', 'd073d52bdb86', 'd073d52bea9c', 'd073d52bd838']; //Our Lifx mac addresses in the same order as the bulbs
 
