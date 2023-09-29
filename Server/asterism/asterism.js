@@ -221,6 +221,7 @@ var owner;
 var sliderPosition = {
 	current: 0,
 	previous: 0,
+	next: 0,
 }
 //Position of the controllers' potentiometers (both current and last received). 0-500.
 
@@ -234,23 +235,37 @@ xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 
 		if(words[0]=="FINAL"){ //If it is a message received when the user has moved the slider and stopped
 			owner = words[1]; //Save the owner of the message 
-			//let type = words[2]; //save message type (not being used right now)
-			
+			sliderPosition.next = parseInt( words[3] ,10);
 
 			clearTimeout(finalSyncTimeout);
 			finalSyncTimeout = setTimeout( function(){
-			sliderPosition.current = parseInt( words[3] ,10); //Save the new light position in an int. This will trigger sendPosition()
-			for (const key in sublights) {
-				sublights[key].position = constrain(parseInt(words[3],10),0,500);
-			}
-			moveLightObject(); //Run function that updates the lights according to the final pot movement (argument is brightness 0-100)
-		}, finalSyncDelay);
+				sliderPosition.current = sliderPosition.next; //Save the new light position in an int. This will trigger sendPosition()
+				for (const key in sublights) {
+					sublights[key].position = constrain(parseInt(words[3],10),0,500);
+				}
+				moveLightObject(); //Run function that updates the lights according to the final pot movement (argument is brightness 0-100)
+			}, finalSyncDelay);
 		
 //console.log("::::::::::::::::::::Updated lights to: ".concat(lightPosition));
 		}else if(words[0]=="STR"){ //If it is a message received when the user is struggling with another
-			clearTimeout(finalSyncTimeout);
 			owner = "COORD"; //Set the owner as the coordinator so everyone receives it equally and the position is correctly set
-			sliderPosition.current = parseInt(words[3],10); //Save the position as an int. This will trigger sendPosition()
+			sender = words[1]; //Save the owner of the message 
+			for (const key in sublights) {
+				if(sublights[key].owner == sender){
+					sublights[key].position = constrain(parseInt(words[3],10),0,500);
+				}
+			}
+			moveLightObject();
+			sliderPosition.current = parseInt(words[3], 10); //Save the position as an int. This will trigger sendPosition()
+
+			clearTimeout(finalSyncTimeout);
+			finalSyncTimeout = setTimeout( function(){
+				for (const key in sublights) {
+					sublights[key].position = constrain(parseInt(words[3],10),0,500);
+				}
+				moveLightObject(); //Run function that updates the lights according to the final pot movement (argument is brightness 0-100)
+			}, 1000);
+
 		}else if(words[0]=="CON"){ //Else if the message is received during the movement of a slider
 			//lightPosition = constrain(parseInt(words[3],10),0,500); //Save the position as an int
 			let sender = words[1];
