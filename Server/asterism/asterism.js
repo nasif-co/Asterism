@@ -32,7 +32,7 @@ const lifxMAC = [
 ];
 //MAC addresses of all bulbs used in the program, in their physical order
 
-const maxBrightness = 100;
+const maxBrightness = 255;
 //Max value of brightness that the bulbs should reach. 0-255.
 
 const minBrightness = 0;
@@ -112,8 +112,8 @@ function deRegisterLights(light) {
 			break;
 		}
 	}
-	console.log('                                                LIFX::: Bulb ' + (bulbs[i].idealPosition + 1) + ' disconnected.');
 	if( currentKey != null ){
+		console.log('                                                LIFX::: Bulb ' + (bulbs[currentKey].idealPosition + 1) + ' disconnected.');
 		bulbs.splice(currentKey, 1);
 	}
 }
