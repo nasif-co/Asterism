@@ -14,7 +14,7 @@ The PANID for the XBees is 1996.
 const controllerList = {
 	red: "C59",
 	green: "DD3",
-	blue: "",
+	blue: "C5E",
 }
 //IDs of active controllers and their colors
 
@@ -38,11 +38,15 @@ const maxBrightness = 255;
 const minBrightness = 0;
 //Min value of brightness that the bulbs should be at. 0-255
 
+const maxSaturation = 0.1;
+//Max saturation of LIFX colors. 0-1 (decimals)
+
 const bulbFrameRate = 8;
 //Animation framerate for the bulbs. Larger means more bandwidth.
 
 const xbeePort = "/dev/tty.usbserial-DN05LSUY";
 //Seria port path for the coordinator XBee connected to the computer
+//When in raspberry pi use "/dev/ttyUSB0"
 
 const finalSyncDelay = 800;
 //Milliseconds before a new light position is sync'ed to all colors.
@@ -359,13 +363,19 @@ function moveLightObject(){
 				let bulbColor = [];
 				let colorCounter = 0;
 				for (const color in sublights) {
-					bulbColor[colorCounter] = constrain( constrain(map(sublights[color].smoothedPos, intervalSize*(key-1), intervalSize*key,0,1),0,1)*maxBrightness - constrain(map(sublights[color].smoothedPos,intervalSize*key,intervalSize*(key+1),0,1),0,1)*maxBrightness, minBrightness, maxBrightness);
+					bulbColor[colorCounter] = Math.floor( constrain( constrain(map(sublights[color].smoothedPos, intervalSize*(key-1), intervalSize*key,0,1),0,1)*maxBrightness - constrain(map(sublights[color].smoothedPos,intervalSize*key,intervalSize*(key+1),0,1),0,1)*maxBrightness, minBrightness, maxBrightness) );
 					colorCounter++;
 				}
 
 				//Send values to bulb only if they are different from the last sent values
 				if( !arraysAreEqual(bulbColor, bulbs[key].color) ){
-					bulbs[key].lifx.colorRgb(bulbColor[0],bulbColor[1],bulbColor[2],1000/bulbFrameRate);
+					//Previously used line that set the color directly
+					//bulbs[key].lifx.colorRgb(bulbColor[0],bulbColor[1],bulbColor[2],1000/bulbFrameRate);
+					
+					//New method allos for independent control over the color saturation
+					const filteredColor = rgbLimitSaturation(bulbColor[0], bulbColor[1], bulbColor[2], maxSaturation);
+					bulbs[key].lifx.colorRgb(filteredColor[0], filteredColor[1], filteredColor[2], 1000/bulbFrameRate);
+
 					bulbs[key].color = bulbColor;
 				}
 			}
@@ -488,3 +498,58 @@ const arraysAreEqual = (a, b) => {
 	  return true;
 	}
 };
+
+function rgbLimitSaturation(r, g, b, satLimit) {
+	//Part 1: Convert to HSL
+	//RGB to HSL converter modified from https://gist.github.com/mjackson/5311256
+	r /= 255, g /= 255, b /= 255;
+  
+	var max = Math.max(r, g, b), min = Math.min(r, g, b);
+	var h, s, l = (max + min) / 2;
+  
+	if (max == min) {
+	  h = s = 0; // achromatic
+	} else {
+	  var d = max - min;
+	  s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  
+	  switch (max) {
+		case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+		case g: h = (b - r) / d + 2; break;
+		case b: h = (r - g) / d + 4; break;
+	  }
+  
+	  h /= 6;
+	}
+	
+	//Part 2: Limit saturation
+	s = constrain(s, 0, satLimit);
+
+	//Part 3: Convert back to RGB and return
+	//HSL to RGB converter modified from https://gist.github.com/mjackson/5311256
+	r = null;
+	g = null; 
+	b = null;
+
+	if (s == 0) {
+		r = g = b = l; // achromatic
+	} else {
+		function hue2rgb(p, q, t) {
+		if (t < 0) t += 1;
+		if (t > 1) t -= 1;
+		if (t < 1/6) return p + (q - p) * 6 * t;
+		if (t < 1/2) return q;
+		if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+		return p;
+		}
+
+		var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+		var p = 2 * l - q;
+
+		r = hue2rgb(p, q, h + 1/3);
+		g = hue2rgb(p, q, h);
+		b = hue2rgb(p, q, h - 1/3);
+	}
+
+	return [ Math.floor(r * 255), Math.floor(g * 255), Math.floor(b * 255) ];
+}  
