@@ -158,6 +158,9 @@ function sendTX(payload){
 /**** Initialize program on establishing serial connection with XBee ****/
 
 serialport.on("open",function(){
+	xbeeAPI.parser.on("data", xbeeHandleMessage);
+	//Attaches the message handler to the message received event
+
 	setInterval(sendPosition,200);
 	//In charge of sending the new positions to the sliders
 
@@ -253,7 +256,7 @@ var sliderPosition = {
 }
 //Position of the controllers' potentiometers (both current and last received). 0-500.
 
-xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
+function xbeeHandleMessage(frame) { //Whenever data is received
 	if(frame.type==0x90){ //Make sure it is a normal data packet
 		var received = frame.data.toString('utf8') //save the data
 		console.log(">>", received); //print it to console
@@ -308,7 +311,7 @@ xbeeAPI.parser.on("data", function(frame) { //Whenever data is received
 		console.log("Data: ".concat(frame.data.toString('utf8')));
 		console.log("********End oddity***************");
 	}
-});
+}
 
 
 
