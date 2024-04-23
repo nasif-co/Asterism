@@ -58,6 +58,10 @@ void setup() {
 
   pinMode(A3, INPUT);
 
+  //Backlight LEDs
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+
   /* Check Limits:
     Was used to automatically calibrate the max and min of the pot.
     but was commented because if the user is holding the pot/string
@@ -79,6 +83,9 @@ void loop() {
 
   //Only proceed with other functions if the XBee has been identified
   if( !me.equals("") ){
+    digitalWrite(4, HIGH); //power on backlight
+    digitalWrite(5, HIGH); //power on backlight
+    
     filter(); //Used to read and filter the potentiometer readings.
     checkSliding(); //Check if the pot is being moved
   
